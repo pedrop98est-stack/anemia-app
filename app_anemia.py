@@ -11,18 +11,22 @@ st.caption("Ferramenta de apoio ao raciocínio clínico. Não substitui avaliaç
 if "etapa" not in st.session_state:
     st.session_state.etapa = 1
 
+
 def avancar():
     st.session_state.etapa += 1
+
 
 def voltar():
     if st.session_state.etapa > 1:
         st.session_state.etapa -= 1
+
 
 def resetar():
     for k in list(st.session_state.keys()):
         if k != "etapa":
             del st.session_state[k]
     st.session_state.etapa = 1
+
 
 # -----------------------------
 # Funções
@@ -32,6 +36,7 @@ def confirmar_anemia(sexo: str, hb: float) -> bool:
         return hb < 13
     return hb < 12
 
+
 def classificar_vcm(vcm: float) -> str:
     if vcm < 80:
         return "Microcítica"
@@ -39,13 +44,16 @@ def classificar_vcm(vcm: float) -> str:
         return "Normocítica"
     return "Macrocítica"
 
-def calcular_ist(ferro: float, tibc: float) -> float | None:
+
+def calcular_ist(ferro: float, tibc: float):
     if tibc <= 0:
         return None
     return (ferro / tibc) * 100
 
+
 def calcular_retic_corr(retic: float, ht: float) -> float:
     return retic * (ht / 45)
+
 
 def calcular_rpi(retic_corr: float, ht: float) -> float:
     if ht >= 40:
@@ -58,7 +66,12 @@ def calcular_rpi(retic_corr: float, ht: float) -> float:
         fator = 2.5
     return retic_corr / fator
 
-def sugestao_exames_por_padrao(tipo: str) -> list[str]:
+
+def obter_ht_base():
+    return st.session_state.get("ht")
+
+
+def sugestao_exames_por_padrao(tipo: str):
     if tipo == "Microcítica":
         return [
             "Ferritina",
@@ -80,6 +93,7 @@ def sugestao_exames_por_padrao(tipo: str) -> list[str]:
         "Se B12/folato normais: função hepática, TSH, revisão de álcool e drogas",
     ]
 
+
 # -----------------------------
 # Barra lateral
 # -----------------------------
@@ -90,6 +104,7 @@ with st.sidebar:
         resetar()
         st.rerun()
 
+
 # -----------------------------
 # ETAPA 1
 # -----------------------------
@@ -98,19 +113,61 @@ if st.session_state.etapa == 1:
     st.write("Preencha apenas os dados iniciais do hemograma.")
 
     with st.form("etapa1"):
-        sexo = st.selectbox("Sexo", ["Masculino", "Feminino"], key="sexo")
-        hb = st.number_input("Hemoglobina (g/dL)", min_value=0.0, max_value=25.0, value=12.0, step=0.1, key="hb")
-        ht = st.number_input("Hematócrito (%)", min_value=0.0, max_value=70.0, value=36.0, step=0.1, key="ht")
-        vcm = st.number_input("VCM (fL)", min_value=50.0, max_value=150.0, value=90.0, step=0.1, key="vcm")
-        rdw = st.number_input("RDW (%)", min_value=8.0, max_value=40.0, value=13.0, step=0.1, key="rdw")
-        rbc = st.number_input("Hemácias (milhões/µL)", min_value=0.0, max_value=10.0, value=4.5, step=0.1, key="rbc")
+        sexo = st.selectbox("Sexo", ["Masculino", "Feminino"], key="sexo_input")
+        hb = st.number_input(
+            "Hemoglobina (g/dL)",
+            min_value=0.0,
+            max_value=25.0,
+            value=12.0,
+            step=0.1,
+            key="hb_input",
+        )
+        ht = st.number_input(
+            "Hematócrito (%)",
+            min_value=0.0,
+            max_value=70.0,
+            value=36.0,
+            step=0.1,
+            key="ht_input",
+        )
+        vcm = st.number_input(
+            "VCM (fL)",
+            min_value=50.0,
+            max_value=150.0,
+            value=90.0,
+            step=0.1,
+            key="vcm_input",
+        )
+        rdw = st.number_input(
+            "RDW (%)",
+            min_value=8.0,
+            max_value=40.0,
+            value=13.0,
+            step=0.1,
+            key="rdw_input",
+        )
+        rbc = st.number_input(
+            "Hemácias (milhões/µL)",
+            min_value=0.0,
+            max_value=10.0,
+            value=4.5,
+            step=0.1,
+            key="rbc_input",
+        )
 
         enviado = st.form_submit_button("Interpretar hemograma inicial")
 
     if enviado:
+        st.session_state["sexo"] = sexo
+        st.session_state["hb"] = hb
+        st.session_state["ht"] = ht
+        st.session_state["vcm"] = vcm
+        st.session_state["rdw"] = rdw
+        st.session_state["rbc"] = rbc
+
         anemia = confirmar_anemia(sexo, hb)
-        st.session_state.anemia = anemia
-        st.session_state.tipo = classificar_vcm(vcm)
+        st.session_state["anemia"] = anemia
+        st.session_state["tipo"] = classificar_vcm(vcm)
 
         if not anemia:
             st.success("Sem anemia pelos critérios informados.")
@@ -119,10 +176,12 @@ if st.session_state.etapa == 1:
             st.subheader("Interpretação inicial")
             st.write(f"**Classificação morfológica:** {st.session_state.tipo}")
 
-            justificativas = [f"Hb = {hb:.1f} g/dL"]
-            justificativas.append(f"VCM = {vcm:.1f} fL")
-            justificativas.append(f"RDW = {rdw:.1f}%")
-            justificativas.append(f"Hemácias = {rbc:.1f} milhões/µL")
+            justificativas = [
+                f"Hb = {hb:.1f} g/dL",
+                f"VCM = {vcm:.1f} fL",
+                f"RDW = {rdw:.1f}%",
+                f"Hemácias = {rbc:.1f} milhões/µL",
+            ]
 
             st.write("**Pistas do hemograma:**")
             for j in justificativas:
@@ -146,6 +205,7 @@ if st.session_state.etapa == 1:
                 st.write(f"- {exame}")
 
             st.button("Avançar para exames complementares", on_click=avancar)
+
 
 # -----------------------------
 # ETAPA 2
@@ -206,36 +266,41 @@ elif st.session_state.etapa == 2:
                 enviar = st.form_submit_button("Refinar diagnóstico")
 
             if enviar:
-                retic_corr = calcular_retic_corr(retic, st.session_state.ht)
-                rpi = calcular_rpi(retic_corr, st.session_state.ht)
-                ist = calcular_ist(ferro, tibc)
+                ht_base = obter_ht_base()
 
-                st.subheader("Resultado do refinamento")
-                st.write(f"- Reticulócito corrigido: {retic_corr:.2f}")
-                st.write(f"- RPI: {rpi:.2f}")
-                if ist is not None:
-                    st.write(f"- IST: {ist:.1f}%")
-
-                if rpi >= 3:
-                    if ldh > 250 and bi > 1.2 and haptoglobina < 50:
-                        if coombs == "Positivo":
-                            st.success("Diagnóstico provável: anemia hemolítica autoimune.")
-                        else:
-                            st.success("Diagnóstico provável: hemólise não imune.")
-                        st.write("- Padrão laboratorial compatível com hemólise.")
-                    else:
-                        st.success("Padrão hiperproliferativo: considerar sangramento agudo/recente ou hemólise em investigação.")
+                if ht_base is None:
+                    st.error("Hematócrito da etapa 1 não encontrado. Volte e preencha o hemograma inicial novamente.")
                 else:
-                    if ferritina < 30:
-                        st.success("Diagnóstico provável: deficiência de ferro em fase inicial.")
-                    elif ist is not None and ist < 20:
-                        st.success("Diagnóstico provável: deficiência de ferro ou anemia inflamatória com ferropenia funcional.")
-                    elif creatinina > 1.5:
-                        st.success("Diagnóstico provável: anemia da doença renal crônica.")
-                    elif tsh > 4:
-                        st.success("Diagnóstico provável: anemia associada a hipotireoidismo.")
+                    retic_corr = calcular_retic_corr(retic, ht_base)
+                    rpi = calcular_rpi(retic_corr, ht_base)
+                    ist = calcular_ist(ferro, tibc)
+
+                    st.subheader("Resultado do refinamento")
+                    st.write(f"- Reticulócito corrigido: {retic_corr:.2f}")
+                    st.write(f"- RPI: {rpi:.2f}")
+                    if ist is not None:
+                        st.write(f"- IST: {ist:.1f}%")
+
+                    if rpi >= 3:
+                        if ldh > 250 and bi > 1.2 and haptoglobina < 50:
+                            if coombs == "Positivo":
+                                st.success("Diagnóstico provável: anemia hemolítica autoimune.")
+                            else:
+                                st.success("Diagnóstico provável: hemólise não imune.")
+                            st.write("- Padrão laboratorial compatível com hemólise.")
+                        else:
+                            st.success("Padrão hiperproliferativo: considerar sangramento agudo/recente ou hemólise em investigação.")
                     else:
-                        st.success("Padrão compatível com anemia de doença crônica/inflamatória ou outra causa hipoproliferativa.")
+                        if ferritina < 30:
+                            st.success("Diagnóstico provável: deficiência de ferro em fase inicial.")
+                        elif ist is not None and ist < 20:
+                            st.success("Diagnóstico provável: deficiência de ferro ou anemia inflamatória com ferropenia funcional.")
+                        elif creatinina > 1.5:
+                            st.success("Diagnóstico provável: anemia da doença renal crônica.")
+                        elif tsh > 4:
+                            st.success("Diagnóstico provável: anemia associada a hipotireoidismo.")
+                        else:
+                            st.success("Padrão compatível com anemia de doença crônica/inflamatória ou outra causa hipoproliferativa.")
 
         elif tipo == "Macrocítica":
             with st.form("macro"):
@@ -252,40 +317,46 @@ elif st.session_state.etapa == 2:
                 enviar = st.form_submit_button("Refinar diagnóstico")
 
             if enviar:
-                retic_corr = calcular_retic_corr(retic, st.session_state.ht)
-                rpi = calcular_rpi(retic_corr, st.session_state.ht)
+                ht_base = obter_ht_base()
 
-                st.subheader("Resultado do refinamento")
-                st.write(f"- Reticulócito corrigido: {retic_corr:.2f}")
-                st.write(f"- RPI: {rpi:.2f}")
-
-                if rpi >= 3:
-                    if ldh > 250 and bi > 1.2 and haptoglobina < 50:
-                        if coombs == "Positivo":
-                            st.success("Diagnóstico provável: hemólise com macrocitose secundária à reticulocitose.")
-                        else:
-                            st.success("Diagnóstico provável: hemólise não imune com macrocitose secundária.")
-                    else:
-                        st.success("Macrocitose com padrão hiperproliferativo: considerar hemólise ou recuperação medular.")
+                if ht_base is None:
+                    st.error("Hematócrito da etapa 1 não encontrado. Volte e preencha o hemograma inicial novamente.")
                 else:
-                    if b12 < 200:
-                        st.success("Diagnóstico provável: deficiência de vitamina B12.")
-                    elif folato < 4:
-                        st.success("Diagnóstico provável: deficiência de ácido fólico.")
-                    elif alcool:
-                        st.success("Padrão compatível com macrocitose associada ao álcool.")
-                    elif drogas:
-                        st.success("Padrão compatível com macrocitose relacionada a medicação.")
-                    elif tsh > 4:
-                        st.success("Padrão compatível com macrocitose associada a hipotireoidismo.")
+                    retic_corr = calcular_retic_corr(retic, ht_base)
+                    rpi = calcular_rpi(retic_corr, ht_base)
+
+                    st.subheader("Resultado do refinamento")
+                    st.write(f"- Reticulócito corrigido: {retic_corr:.2f}")
+                    st.write(f"- RPI: {rpi:.2f}")
+
+                    if rpi >= 3:
+                        if ldh > 250 and bi > 1.2 and haptoglobina < 50:
+                            if coombs == "Positivo":
+                                st.success("Diagnóstico provável: hemólise com macrocitose secundária à reticulocitose.")
+                            else:
+                                st.success("Diagnóstico provável: hemólise não imune com macrocitose secundária.")
+                        else:
+                            st.success("Macrocitose com padrão hiperproliferativo: considerar hemólise ou recuperação medular.")
                     else:
-                        st.success("Considerar hepatopatia, síndrome mielodisplásica ou outras causas de macrocitose.")
+                        if b12 < 200:
+                            st.success("Diagnóstico provável: deficiência de vitamina B12.")
+                        elif folato < 4:
+                            st.success("Diagnóstico provável: deficiência de ácido fólico.")
+                        elif alcool:
+                            st.success("Padrão compatível com macrocitose associada ao álcool.")
+                        elif drogas:
+                            st.success("Padrão compatível com macrocitose relacionada a medicação.")
+                        elif tsh > 4:
+                            st.success("Padrão compatível com macrocitose associada a hipotireoidismo.")
+                        else:
+                            st.success("Considerar hepatopatia, síndrome mielodisplásica ou outras causas de macrocitose.")
 
     col1, col2 = st.columns(2)
     with col1:
         st.button("⬅️ Voltar", on_click=voltar)
     with col2:
         st.button("Ir para resumo final ➡️", on_click=avancar)
+
 
 # -----------------------------
 # ETAPA 3
